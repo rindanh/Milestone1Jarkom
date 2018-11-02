@@ -23,8 +23,8 @@ void send_ack() {
 	bool eot;
 
 	while (true) {
-		frame_size = recvfrom(sock_fd, (char *) frame, MAX_FRAME_SIZE, MSG_WAITALL, (struct sockaddr *) &client_address, &cliend_address_size);
-		frame_error = read_frame(&receiver_seq_num, data, &data_size, &eot, frame);
+		frame_size = recvfrom(sock_fd, (char *) frame, MAX_FRAME_SIZE, MSG_WAITALL, (struct sockaddr *) &client_address, &client_address_size);
+		frame_error = read_frame(&receiver_seq_num, data, &actual_data_size, &eot, frame);
 		create_ack(receiver_seq_num, ack, frame_error);
 		sendto(sock_fd, ack, ACK_SIZE, 0, (const struct sockaddr *) &client_address, client_address_size);
 	}
@@ -47,19 +47,23 @@ int main(int argc, char *argv[]) {
 		return 1;
 	}
 
-	server_addr.sin_family = AF_INET;
-    server_addr.sin_addr.s_addr = INADDR_ANY; 
-    server_addr.sin_port = htons(port);
+	/* CREATING SOCKET */
 
+    // socket file descriptor
     if ((sock_fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
         perror("cannot create socket\n");
 		return 0;
     }
 
-    memset(&server_address, 0, sizeof(server_address));
+    memset((void *)&server_address, 0, sizeof(server_address));
+	memset((void *)&client_address, 0, sizeof(client_address)); 
+	// server address data structure
+	server_address.sin_family = AF_INET;
+	server_address.sin_port = htons(port);
+    server_address.sin_addr.s_addr = htonl(INADDR_ANY); 
 
-    if (bind(socket_fd, (const struct sockaddr *)&server_addr, 
-            sizeof(server_addr)) < 0) { 
+
+    if (bind(sock_fd, (const struct sockaddr *)&server_address, sizeof(server_address)) < 0) { 
         perror("bind failed");
 		return 0;
     }
@@ -78,7 +82,6 @@ int main(int argc, char *argv[]) {
     bool eot;
     bool frame_error;
 
-    memset(&client_addr, 0, sizeof(client_addr)); 
 
     bool receive_done = false;
     int buffer_num = 0;
@@ -96,7 +99,7 @@ int main(int argc, char *argv[]) {
 
     	while (true) {
     		socklen_t cliend_address_size;
-    		frame_size = recvfrom(sock_fd, (char *) frame, MAX_FRAME_SIZE, MSG_WAITALL, (struct sockaddr *) &client_address, &cliend_address_size);
+    		frame_size = recvfrom(sock_fd, (char *) frame, MAX_FRAME_SIZE, MSG_WAITALL, (struct sockaddr *) &client_address, &client_address_size);
 			frame_error = read_frame(&receiver_seq_num, data, &data_size, &eot, frame);
 			create_ack(receiver_seq_num, ack, frame_error);
 			sendto(sock_fd, ack, ACK_SIZE, 0, (const struct sockaddr *) &client_address, client_address_size);
