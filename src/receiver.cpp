@@ -4,7 +4,7 @@
 #include <netdb.h>
 #include <thread>
 
-#include "helpers.h"
+#include "header.h"
 
 #define STANDBY_TIME 3000
 
@@ -14,16 +14,18 @@ int sock_fd;
 struct sockaddr_in server_address, client_address;
 
 void send_ack() {
-	char ack[ACK_SIZE], frame[MAX_FRAME_SIZE], data[MAX_DATA_SIZE];
+	char ack[ACK_SIZE];
+    char frame[MAX_FRAME_SIZE];
+    char data[MAX_DATA_SIZE];
 	int actual_frame_size;
 	int actual_data_size;
-	socklen_t cliend_address_size;
+	socklen_t client_address_size;
 	int receiver_seq_num;
 	bool frame_error;
 	bool eot;
 
 	while (true) {
-		frame_size = recvfrom(sock_fd, (char *) frame, MAX_FRAME_SIZE, MSG_WAITALL, (struct sockaddr *) &client_address, &client_address_size);
+		actual_frame_size = recvfrom(sock_fd, (char *) frame, MAX_FRAME_SIZE, MSG_WAITALL, (struct sockaddr *) &client_address, &client_address_size);
 		frame_error = read_frame(&receiver_seq_num, data, &actual_data_size, &eot, frame);
 		create_ack(receiver_seq_num, ack, frame_error);
 		sendto(sock_fd, ack, ACK_SIZE, 0, (const struct sockaddr *) &client_address, client_address_size);
@@ -98,9 +100,9 @@ int main(int argc, char *argv[]) {
     	laf = lfr + window_size;
 
     	while (true) {
-    		socklen_t cliend_address_size;
-    		frame_size = recvfrom(sock_fd, (char *) frame, MAX_FRAME_SIZE, MSG_WAITALL, (struct sockaddr *) &client_address, &client_address_size);
-			frame_error = read_frame(&receiver_seq_num, data, &data_size, &eot, frame);
+    		socklen_t client_address_size;
+    		actual_frame_size = recvfrom(sock_fd, (char *) frame, MAX_FRAME_SIZE, MSG_WAITALL, (struct sockaddr *) &client_address, &client_address_size);
+			frame_error = read_frame(&receiver_seq_num, data, &actual_data_size, &eot, frame);
 			create_ack(receiver_seq_num, ack, frame_error);
 			sendto(sock_fd, ack, ACK_SIZE, 0, (const struct sockaddr *) &client_address, client_address_size);
 
@@ -126,12 +128,12 @@ int main(int argc, char *argv[]) {
 					} else if (receiver_seq_num>lfr+1) {
 						if (!window_receiver_mask[receiver_seq_num - (lfr + 1)]) {
                             memcpy(buffer + buffer_shift, data, actual_data_size);
-                            window_receiver_mask[recv_seq_num - (lfr + 1)] = true;
+                            window_receiver_mask[receiver_seq_num - (lfr + 1)] = true;
                         }
 					}
 
 					if (eot) {
-						buffer_size = buffer_shift + actual_data_size;
+						actual_buffer_size = buffer_shift + actual_data_size;
                         receiver_seq_count = receiver_seq_num + 1;
                         receive_done = true;
 					}
